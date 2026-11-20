@@ -6,7 +6,7 @@ import ai.venice.trestage.core.Setting;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexRendering;
+import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -34,7 +34,7 @@ public class ESP extends Module {
             if (!(e instanceof LivingEntity) || e == mc.player) continue;
             if (playersOnly.bool && !(e instanceof PlayerEntity)) continue;
             if (e.squaredDistanceTo(mc.player) > range.num * range.num) continue;
-            VertexRendering.drawBox(ms, vc, e.getBoundingBox().expand(0.05), 0.48F, 0.36F, 1.0F, 0.9F);
+            WorldRenderer.drawBox(ms, vc, e.getBoundingBox().expand(0.05), 0.48F, 0.36F, 1.0F, 0.9F);
         }
 
         ms.pop();
