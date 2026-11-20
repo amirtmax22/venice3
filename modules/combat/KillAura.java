@@ -50,16 +50,18 @@ public class KillAura extends Module {
     private final TimerUtil switchTimer = new TimerUtil();
     private LivingEntity target;
     private long nextDelay = 100L;
+    private int ticksSinceAttack = 12;
 
     public KillAura() { super("KillAura", Category.COMBAT); }
 
-    @Override public void onEnable() { target = null; nextDelay = 100L; }
+    @Override public void onEnable() { target = null; nextDelay = 100L; ticksSinceAttack = 12; }
     @Override public void onDisable() { target = null; }
 
     @Override
     public void onTick() {
         var mc = Trestage.mc;
         if (mc.currentScreen != null) return;
+        if (ticksSinceAttack < 40) ticksSinceAttack++;
         if (onlyKey.bool && !mc.options.attackKey.isPressed()) return;
 
         LivingEntity candidate = findTarget();
@@ -73,7 +75,7 @@ public class KillAura extends Module {
 
         if (!Trestage.rotations.step(target, (float) speed.num)) return;
         if (MathUtil.angleTo(target) > aimAngle.num) return;
-        if (cooldown.bool && mc.player.getAttackCooldown() < 0.95F) return;
+        if (cooldown.bool && ticksSinceAttack < 12) return;
         if (!attackTimer.passed(nextDelay)) return;
 
         if (Math.random() * 100.0 < miss.num) {
@@ -89,6 +91,7 @@ public class KillAura extends Module {
         double base = 1000.0 / MathUtil.rand(cpsMin.num, cpsMax.num);
         nextDelay = (long) Math.max(45.0, base + MathUtil.rand(-cpsJitter.num, cpsJitter.num));
         attackTimer.reset();
+        ticksSinceAttack = 0;
     }
 
     private LivingEntity findTarget() {
@@ -123,7 +126,7 @@ public class KillAura extends Module {
     }
 
     private boolean canSee(Vec3d eyes, Entity e) {
-        Vec3d point = new Vec3d(e.getX(), e.getY() + e.getEyeHeight(e.getPose()) * 0.85, e.getZ());
+        Vec3d point = new Vec3d(e.getX(), e.getY() + e.getHeight() * 0.85, e.getZ());
         HitResult hit = Trestage.mc.world.raycast(new RaycastContext(
             eyes, point, RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, Trestage.mc.player));
         if (hit.getType() == HitResult.Type.MISS) return true;
@@ -136,4 +139,4 @@ public class KillAura extends Module {
         String n = e.getName().getString();
         return n.startsWith("[NPC]") || n.equals("Citizen") || n.matches(".*\\d{4,}.*");
     }
-          }
+}
