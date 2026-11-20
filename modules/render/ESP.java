@@ -6,11 +6,11 @@ import ai.venice.trestage.core.Setting;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.minecraft.client.render.RenderLayer;
 import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.WorldRenderer;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.util.math.Box;
 import net.minecraft.util.math.Vec3d;
 
 public class ESP extends Module {
@@ -22,21 +22,47 @@ public class ESP extends Module {
 
     public void render(WorldRenderContext ctx) {
         var mc = Trestage.mc;
-        if (mc.world == null || mc.player == null) return;
+        if (mc.world == null || mc.player == null || ctx.consumers() == null) return;
 
         Vec3d cam = ctx.camera().getPos();
         MatrixStack ms = ctx.matrixStack();
         VertexConsumer vc = ctx.consumers().getBuffer(RenderLayer.getLines());
-        ms.push();
-        ms.translate(-cam.x, -cam.y, -cam.z);
+        MatrixStack.Entry entry = ms.peek();
 
         for (Entity e : mc.world.getEntities()) {
             if (!(e instanceof LivingEntity) || e == mc.player) continue;
             if (playersOnly.bool && !(e instanceof PlayerEntity)) continue;
             if (e.squaredDistanceTo(mc.player) > range.num * range.num) continue;
-            WorldRenderer.drawBox(ms, vc, e.getBoundingBox().expand(0.05), 0.48F, 0.36F, 1.0F, 0.9F);
-        }
 
-        ms.pop();
+            Box b = e.getBoundingBox().expand(0.05).offset(-cam.x, -cam.y, -cam.z);
+            box(vc, entry, b);
+        }
+    }
+
+    private void box(VertexConsumer vc, MatrixStack.Entry entry, Box b) {
+        float r = 0.48F, g = 0.36F, bl = 1.0F, a = 0.9F;
+        edge(vc, entry, b.minX, b.minY, b.minZ, b.maxX, b.minY, b.minZ, r, g, bl, a);
+        edge(vc, entry, b.maxX, b.minY, b.minZ, b.maxX, b.minY, b.maxZ, r, g, bl, a);
+        edge(vc, entry, b.maxX, b.minY, b.maxZ, b.minX, b.minY, b.maxZ, r, g, bl, a);
+        edge(vc, entry, b.minX, b.minY, b.maxZ, b.minX, b.minY, b.minZ, r, g, bl, a);
+        edge(vc, entry, b.minX, b.maxY, b.minZ, b.maxX, b.maxY, b.minZ, r, g, bl, a);
+        edge(vc, entry, b.maxX, b.maxY, b.minZ, b.maxX, b.maxY, b.maxZ, r, g, bl, a);
+        edge(vc, entry, b.maxX, b.maxY, b.maxZ, b.minX, b.maxY, b.maxZ, r, g, bl, a);
+        edge(vc, entry, b.minX, b.maxY, b.maxZ, b.minX, b.maxY, b.minZ, r, g, bl, a);
+        edge(vc, entry, b.minX, b.minY, b.minZ, b.minX, b.maxY, b.minZ, r, g, bl, a);
+        edge(vc, entry, b.maxX, b.minY, b.minZ, b.maxX, b.maxY, b.minZ, r, g, bl, a);
+        edge(vc, entry, b.maxX, b.minY, b.maxZ, b.maxX, b.maxY, b.maxZ, r, g, bl, a);
+        edge(vc, entry, b.minX, b.minY, b.maxZ, b.minX, b.maxY, b.maxZ, r, g, bl, a);
+    }
+
+    private void edge(VertexConsumer vc, MatrixStack.Entry entry,
+                      double x1, double y1, double z1, double x2, double y2, double z2,
+                      float r, float g, float b, float a) {
+        float nx = (float) (x2 - x1), ny = (float) (y2 - y1), nz = (float) (z2 - z1);
+        float len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (len == 0) return;
+        nx /= len; ny /= len; nz /= len;
+        vc.vertex(entry.getPositionMatrix(), (float) x1, (float) y1, (float) z1).color(r, g, b, a).normal(entry, nx, ny, nz);
+        vc.vertex(entry.getPositionMatrix(), (float) x2, (float) y2, (float) z2).color(r, g, b, a).normal(entry, nx, ny, nz);
     }
 }
