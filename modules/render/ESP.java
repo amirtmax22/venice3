@@ -17,6 +17,8 @@ public class ESP extends Module {
 
     private final Setting range = add(new Setting("Range", 40.0, 8.0, 128.0, 4.0));
     private final Setting playersOnly = add(new Setting("Players Only", true));
+    private final Setting tracer = add(new Setting("Tracer", true));
+    private final Setting tracerFromEyes = add(new Setting("Tracer From Eyes", false));
 
     public ESP() { super("ESP", Category.RENDER); }
 
@@ -36,6 +38,18 @@ public class ESP extends Module {
 
             Box b = e.getBoundingBox().expand(0.05).offset(-cam.x, -cam.y, -cam.z);
             box(vc, entry, b);
+
+            if (tracer.bool) {
+                double sx = 0, sy = 0, sz = 0;
+                if (tracerFromEyes.bool) {
+                    Vec3d eye = mc.player.getEyePos();
+                    sx = eye.x - cam.x; sy = eye.y - cam.y; sz = eye.z - cam.z;
+                }
+                double tx = e.getX() - cam.x;
+                double ty = e.getY() + e.getHeight() * 0.5 - cam.y;
+                double tz = e.getZ() - cam.z;
+                edge(vc, entry, sx, sy, sz, tx, ty, tz, 0.48F, 0.36F, 1.0F, 0.75F);
+            }
         }
     }
 
