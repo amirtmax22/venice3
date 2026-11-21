@@ -6,6 +6,7 @@ import ai.venice.trestage.modules.player.Velocity;
 import ai.venice.trestage.modules.render.ESP;
 import ai.venice.trestage.modules.render.Fullbright;
 import ai.venice.trestage.modules.render.HUD;
+import ai.venice.trestage.modules.render.Wings;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,10 +20,12 @@ public class ModuleManager {
         modules.add(new Sprint());
         modules.add(new Velocity());
         modules.add(new ESP());
+        modules.add(new Wings());
         modules.add(new Fullbright());
         modules.add(new HUD());
     }
 
+    public void onTickStart() { for (Module m : modules) if (m.enabled) m.onTickStart(); }
     public void onTick() { for (Module m : modules) if (m.enabled) m.onTick(); }
 
     public Module byName(String n) {
