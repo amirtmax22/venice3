@@ -21,5 +21,6 @@ public class Module {
     public void toggle() { enabled = !enabled; if (enabled) onEnable(); else onDisable(); }
     public void onEnable() {}
     public void onDisable() {}
+    public void onTickStart() {}
     public void onTick() {}
 }
