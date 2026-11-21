@@ -7,6 +7,7 @@ import ai.venice.trestage.core.RotationManager;
 import ai.venice.trestage.gui.ClickGUI;
 import ai.venice.trestage.modules.render.ESP;
 import ai.venice.trestage.modules.render.HUD;
+import ai.venice.trestage.modules.render.Wings;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -19,7 +20,7 @@ import org.lwjgl.glfw.GLFW;
 
 public class Trestage implements ClientModInitializer {
 
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.1.0";
     public static MinecraftClient mc = MinecraftClient.getInstance();
     public static ModuleManager modules;
     public static RotationManager rotations;
@@ -37,10 +38,13 @@ public class Trestage implements ClientModInitializer {
         openGui = KeyBindingHelper.registerKeyBinding(
             new KeyBinding("key.trestage.gui", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_RIGHT_SHIFT, "category.trestage"));
 
+        ClientTickEvents.START_CLIENT_TICK.register(c -> {
+            while (openGui.wasPressed()) if (c.currentScreen == null) c.setScreen(gui);
+            if (c.player == null || c.world == null) return;
+            modules.onTickStart();
+        });
+
         ClientTickEvents.END_CLIENT_TICK.register(c -> {
-            while (openGui.wasPressed()) {
-                if (c.currentScreen == null) c.setScreen(gui);
-            }
             if (c.player == null || c.world == null) return;
             modules.onTick();
         });
@@ -53,6 +57,8 @@ public class Trestage implements ClientModInitializer {
         WorldRenderEvents.LAST.register(ctx -> {
             Module esp = modules.byName("ESP");
             if (esp != null && esp.enabled) ((ESP) esp).render(ctx);
+            Module wings = modules.byName("Wings");
+            if (wings != null && wings.enabled) ((Wings) wings).render(ctx);
         });
     }
 }
