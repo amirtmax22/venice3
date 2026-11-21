@@ -12,21 +12,22 @@ import org.lwjgl.glfw.GLFW;
 
 public class ClickGUI extends Screen {
 
-    private static final int BG = 0xF00E0A18, PANEL = 0xFF16112B;
-    private static final int H1 = 0xFF7A5CFF, H2 = 0xFF3B2A8C;
-    private static final int TEXT = 0xFFEDE9FF, DIM = 0xFF8B82B8;
-    private static final int ACCENT = 0xFF7A5CFF, ROW = 0xFF1E1838, HOVER = 0xFF2A2350;
+    private static final int BG = 0xFF0B0A10, SIDE = 0xFF12111A, PANEL = 0xFF15141E;
+    private static final int H1 = 0xFF8A6BFF, H2 = 0xFF5B3FD6;
+    private static final int TXT = 0xFFF2EFFF, DIM = 0xFF7C7690;
+    private static final int ACC = 0xFF8A6BFF, ROW = 0xFF1A1926, HOV = 0xFF221F33;
 
     private final Module.Category[] cats = Module.Category.values();
+    private int selected = 0;
     private Setting dragging;
     private int dragX;
-    private int px, py;
+    private int px, py, scroll;
 
     public ClickGUI() { super(Text.literal("Trestage")); }
 
     @Override
     protected void init() {
-        px = (width - 430) / 2;
+        px = (width - 460) / 2;
         py = (height - 300) / 2;
     }
 
@@ -35,101 +36,114 @@ public class ClickGUI extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        renderBackground(ctx, mouseX, mouseY, delta);
+        ctx.fill(0, 0, width, height, 0xC8050408);
 
-        int w = 430, h = 300;
-        RenderUtil.rounded(ctx, px - 2, py - 2, w + 4, h + 4, 10, 0x60000000);
-        RenderUtil.rounded(ctx, px, py, w, h, 8, BG);
-        RenderUtil.gradient(ctx, px, py, w, 30, H1, H2);
-        RenderUtil.text(ctx, "TRESTAGE", px + 14, py + 11, 0xFFFFFFFF);
-        RenderUtil.text(ctx, "v" + Trestage.VERSION, px + w - 14 - RenderUtil.width("v" + Trestage.VERSION), py + 11, 0xFFE4DCFF);
-        RenderUtil.text(ctx, "right shift to close", px + 14, py + 34, DIM);
+        int w = 460, h = 300;
+        RenderUtil.rounded(ctx, px - 1, py - 1, w + 2, h + 2, 11, 0x40FFFFFF);
+        RenderUtil.rounded(ctx, px, py, w, h, 10, BG);
 
-        int colW = (w - 24) / cats.length;
+        RenderUtil.gradient(ctx, px, py, w, 34, H1, H2);
+        RenderUtil.rounded(ctx, px, py, w, 34, 10, 0x00FFFFFF);
+        RenderUtil.text(ctx, "TRESTAGE", px + 16, py + 13, 0xFFFFFFFF);
+        String v = "v" + Trestage.VERSION;
+        RenderUtil.text(ctx, v, px + w - 16 - RenderUtil.width(v), py + 13, 0xFFEDE6FF);
+
+        RenderUtil.rounded(ctx, px, py + 34, 96, h - 34, 0, SIDE);
+        int cy = py + 44;
         for (int i = 0; i < cats.length; i++) {
-            int cx = px + 12 + i * colW, cy = py + 50;
-            RenderUtil.rounded(ctx, cx, cy, colW - 6, 12, 4, 0x40FFFFFF);
-            RenderUtil.text(ctx, cats[i].name(), cx + 6, cy + 2, TEXT);
+            boolean sel = i == selected;
+            boolean hov = in(mouseX, mouseY, px + 6, cy, 84, 20);
+            if (sel || hov) RenderUtil.rounded(ctx, px + 6, cy, 84, 20, 5, sel ? ACC : HOV);
+            RenderUtil.text(ctx, cats[i].name(), px + 14, cy + 6, sel ? 0xFFFFFFFF : DIM);
+            cy += 24;
+        }
+        RenderUtil.text(ctx, "R-SHIFT", px + 14, py + h - 22, 0xFF4C4760);
 
-            int ry = cy + 18;
-            for (Module m : Trestage.modules.in(cats[i])) {
-                boolean hover = in(mouseX, mouseY, cx, ry, colW - 6, 14);
-                RenderUtil.rounded(ctx, cx, ry, colW - 6, 14, 4, m.enabled ? ACCENT : (hover ? HOVER : ROW));
-                RenderUtil.text(ctx, m.name, cx + 6, ry + 3, m.enabled ? 0xFFFFFFFF : TEXT);
+        int cx = px + 108, cyy = py + 44;
+        RenderUtil.rounded(ctx, cx - 4, cyy - 4, w - 116, h - 56, 6, PANEL);
+        int ry = cyy - scroll;
 
-                if (m.expanded) {
-                    int sy = ry + 18;
-                    for (Setting s : m.settings) {
-                        if (!s.isVisible()) continue;
-                        if (s.type == Setting.Type.BOOLEAN) {
-                            RenderUtil.text(ctx, s.name, cx + 6, sy, DIM);
-                            RenderUtil.rounded(ctx, cx + colW - 18, sy - 1, 10, 10, 3, s.bool ? ACCENT : HOVER);
-                            sy += 13;
-                        } else if (s.type == Setting.Type.MODE) {
-                            RenderUtil.text(ctx, s.name + ": " + s.mode, cx + 6, sy, DIM);
-                            sy += 12;
-                        } else {
-                            RenderUtil.text(ctx, s.name + " " + s.display(), cx + 6, sy, DIM);
-                            RenderUtil.rect(ctx, cx + 6, sy + 10, colW - 18, 2, 0xFF2A2350);
-                            float pct = (float) ((s.num - s.min) / (s.max - s.min));
-                            RenderUtil.rect(ctx, cx + 6, sy + 10, (colW - 18) * pct, 2, ACCENT);
-                            sy += 20;
-                        }
+        for (Module m : Trestage.modules.in(cats[selected])) {
+            boolean hov = in(mouseX, mouseY, cx, ry, w - 132, 18);
+            RenderUtil.rounded(ctx, cx, ry, w - 132, 18, 4, hov ? HOV : ROW);
+            RenderUtil.text(ctx, m.name, cx + 8, ry + 5, m.enabled ? ACC : TXT);
+
+            int tx = cx + w - 152;
+            RenderUtil.rounded(ctx, tx, ry + 5, 18, 8, 4, m.enabled ? ACC : 0xFF2C2942);
+            RenderUtil.rect(ctx, (int) (tx + (m.enabled ? 10 : 2)), ry + 6, 6, 6, 0xFFFFFFFF);
+
+            if (m.expanded) {
+                int sy = ry + 22;
+                for (Setting s : m.settings) {
+                    if (!s.isVisible()) continue;
+                    if (s.type == Setting.Type.BOOLEAN) {
+                        RenderUtil.text(ctx, s.name, cx + 12, sy, DIM);
+                        RenderUtil.rounded(ctx, cx + w - 152, sy - 1, 12, 9, 4, s.bool ? ACC : 0xFF2C2942);
+                        sy += 14;
+                    } else if (s.type == Setting.Type.MODE) {
+                        RenderUtil.text(ctx, s.name + ": " + s.mode, cx + 12, sy, DIM);
+                        sy += 13;
+                    } else {
+                        RenderUtil.text(ctx, s.name + " " + s.display(), cx + 12, sy, DIM);
+                        RenderUtil.rect(ctx, cx + 12, sy + 10, w - 160, 2, 0xFF2C2942);
+                        float pct = (float) ((s.num - s.min) / (s.max - s.min));
+                        RenderUtil.rect(ctx, cx + 12, sy + 10, (w - 160) * pct, 2, ACC);
+                        sy += 21;
                     }
-                    ry = sy;
                 }
-                ry += 16;
+                ry = sy + 2;
             }
+            ry += 22;
         }
 
-        RenderUtil.rounded(ctx, px, py + h - 18, w, 18, 8, 0x40FFFFFF);
-        RenderUtil.text(ctx, "range 3.0-3.3 | rot 25-45 | aim 25-35 | cps 9-13", px + 12, py + h - 13, DIM);
+        RenderUtil.text(ctx, "left: toggle   right: settings", px + 108, py + h - 16, 0xFF4C4760);
         super.render(ctx, mouseX, mouseY, delta);
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        int colW = (430 - 24) / cats.length;
         for (int i = 0; i < cats.length; i++) {
-            int cx = px + 12 + i * colW, cy = py + 50;
-            int ry = cy + 18;
-            for (Module m : Trestage.modules.in(cats[i])) {
-                if (in((int) mx, (int) my, cx, ry, colW - 6, 14)) {
-                    if (button == 0) { m.toggle(); Config.save(); }
-                    else if (button == 1) m.expanded = !m.expanded;
-                    return true;
-                }
-                if (m.expanded) {
-                    int sy = ry + 18;
-                    for (Setting s : m.settings) {
-                        if (!s.isVisible()) continue;
-                        if (s.type == Setting.Type.BOOLEAN) {
-                            if (in((int) mx, (int) my, cx + 6, sy - 2, colW - 12, 12)) { s.toggle(); Config.save(); return true; }
-                            sy += 13;
-                        } else if (s.type == Setting.Type.MODE) {
-                            if (in((int) mx, (int) my, cx + 6, sy - 2, colW - 12, 12)) { s.cycle(); Config.save(); return true; }
-                            sy += 12;
-                        } else {
-                            if (in((int) mx, (int) my, cx + 6, sy + 8, colW - 18, 6)) {
-                                dragging = s; dragX = cx + 6; s.drag(mx, dragX, colW - 18); return true;
-                            }
-                            sy += 20;
-                        }
-                    }
-                    ry = sy;
-                }
-                ry += 16;
+            if (in((int) mx, (int) my, px + 6, py + 44 + i * 24, 84, 20)) {
+                selected = i; scroll = 0;
+                return true;
             }
+        }
+
+        int cx = px + 108;
+        int ry = py + 44 - scroll;
+        for (Module m : Trestage.modules.in(cats[selected])) {
+            if (in((int) mx, (int) my, cx, ry, 460 - 132, 18)) {
+                if (button == 0) { m.toggle(); Config.save(); }
+                else if (button == 1) m.expanded = !m.expanded;
+                return true;
+            }
+            if (m.expanded) {
+                int sy = ry + 22;
+                for (Setting s : m.settings) {
+                    if (!s.isVisible()) continue;
+                    if (s.type == Setting.Type.BOOLEAN) {
+                        if (in((int) mx, (int) my, cx + 12, sy - 2, 460 - 160, 12)) { s.toggle(); Config.save(); return true; }
+                        sy += 14;
+                    } else if (s.type == Setting.Type.MODE) {
+                        if (in((int) mx, (int) my, cx + 12, sy - 2, 460 - 160, 12)) { s.cycle(); Config.save(); return true; }
+                        sy += 13;
+                    } else {
+                        if (in((int) mx, (int) my, cx + 12, sy + 8, 460 - 160, 6)) {
+                            dragging = s; dragX = cx + 12; s.drag(mx, dragX, 460 - 160); return true;
+                        }
+                        sy += 21;
+                    }
+                }
+                ry = sy + 2;
+            }
+            ry += 22;
         }
         return super.mouseClicked(mx, my, button);
     }
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
-        if (dragging != null) {
-            dragging.drag(mx, dragX, (430 - 24) / cats.length - 18);
-            return true;
-        }
+        if (dragging != null) { dragging.drag(mx, dragX, 460 - 160); return true; }
         return super.mouseDragged(mx, my, button, dx, dy);
     }
 
@@ -140,13 +154,19 @@ public class ClickGUI extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int key, int scancode, int mods) {
+    public boolean mouseScrolled(double mx, double my, double hAmount, double vAmount) {
+        scroll = (int) Math.max(0, scroll - vAmount * 18);
+        return true;
+    }
+
+    @Override
+    public boolean keyPressed(int key, int sc, int mods) {
         if (key == GLFW.GLFW_KEY_ESCAPE || key == GLFW.GLFW_KEY_RIGHT_SHIFT) {
             Config.save();
             close();
             return true;
         }
-        return super.keyPressed(key, scancode, mods);
+        return super.keyPressed(key, sc, mods);
     }
 
     private boolean in(int mx, int my, int x, int y, int w, int h) {
