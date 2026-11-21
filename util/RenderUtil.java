@@ -10,6 +10,7 @@ public class RenderUtil {
     }
 
     public static void rounded(DrawContext ctx, float x, float y, float w, float h, float r, int color) {
+        if (r <= 0) { rect(ctx, x, y, w, h, color); return; }
         rect(ctx, x + r, y, w - 2 * r, h, color);
         rect(ctx, x, y + r, w, h - 2 * r, color);
         rect(ctx, x + 1, y + 1, r, r, color);
