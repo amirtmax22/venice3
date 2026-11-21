@@ -2,12 +2,9 @@ package ai.venice.trestage.core;
 
 import ai.venice.trestage.Trestage;
 import net.minecraft.entity.LivingEntity;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.util.math.MathHelper;
 
 public class RotationManager {
-
-    private float lastYaw, lastPitch;
 
     public float gcd() {
         float f = (float) (Trestage.mc.options.getMouseSensitivity().getValue() * 0.6 + 0.2);
@@ -18,7 +15,7 @@ public class RotationManager {
     public float[] rawTo(LivingEntity target) {
         var p = Trestage.mc.player;
         double dx = target.getX() - p.getX();
-        double dy = (target.getY() + target.getEyeHeight(target.getPose()) * 0.9) - p.getEyePos().y;
+        double dy = (target.getY() + target.getHeight() * 0.9) - p.getEyePos().y;
         double dz = target.getZ() - p.getZ();
         double dist = Math.sqrt(dx * dx + dz * dz);
         float yaw = (float) (Math.toDegrees(Math.atan2(dz, dx)) - 90.0);
@@ -44,13 +41,6 @@ public class RotationManager {
 
         p.setYaw(nYaw);
         p.setPitch(nPitch);
-
-        if (nYaw != lastYaw || nPitch != lastPitch) {
-            Trestage.mc.getNetworkHandler().sendPacket(
-                new PlayerMoveC2SPacket.LookAndOnGround(nYaw, nPitch, p.isOnGround()));
-            lastYaw = nYaw;
-            lastPitch = nPitch;
-        }
 
         return Math.abs(MathHelper.wrapDegrees(want[0] - nYaw)) < 1.5F && Math.abs(want[1] - nPitch) < 1.5F;
     }
