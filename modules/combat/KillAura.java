@@ -29,12 +29,13 @@ public class KillAura extends Module {
     private final Setting cpsMax    = add(new Setting("CPS Max", 13.0, 1.0, 20.0, 0.5));
     private final Setting cpsJitter = add(new Setting("CPS Jitter", 1.6, 0.0, 4.0, 0.1));
     private final Setting cooldown  = add(new Setting("Wait Cooldown", true));
-    private final Setting aimAngle  = add(new Setting("Aim Angle", 30.0, 5.0, 90.0, 1.0));
+    private final Setting aimOnly   = add(new Setting("Aim Only When Ready", true));
+    private final Setting aimAngle  = add(new Setting("Aim Angle", 25.0, 5.0, 90.0, 1.0));
     private final Setting fov       = add(new Setting("FOV", 120.0, 30.0, 360.0, 5.0));
-    private final Setting speed     = add(new Setting("Rot Speed", 34.0, 5.0, 180.0, 1.0));
+    private final Setting speed     = add(new Setting("Rot Speed", 30.0, 5.0, 180.0, 1.0));
     private final Setting sort      = add(new Setting("Sort", "Angle", "Angle", "Distance", "Health"));
     private final Setting raycast   = add(new Setting("Raycast", true));
-    private final Setting miss      = add(new Setting("Miss Chance", 7.0, 0.0, 30.0, 1.0));
+    private final Setting miss      = add(new Setting("Miss Chance", 8.0, 0.0, 30.0, 1.0));
     private final Setting players   = add(new Setting("Players", true));
     private final Setting mobs      = add(new Setting("Mobs", false));
     private final Setting animals   = add(new Setting("Animals", false));
@@ -44,7 +45,7 @@ public class KillAura extends Module {
     private final Setting keepSprint= add(new Setting("Keep Sprint", true));
     private final Setting swing     = add(new Setting("Swing", true));
     private final Setting onlyKey   = add(new Setting("Only On Attack", false));
-    private final Setting switchCd  = add(new Setting("Switch Cooldown", 120.0, 0.0, 600.0, 10.0));
+    private final Setting switchCd  = add(new Setting("Switch Cooldown", 150.0, 0.0, 600.0, 10.0));
 
     private final TimerUtil attackTimer = new TimerUtil();
     private final TimerUtil switchTimer = new TimerUtil();
@@ -58,7 +59,7 @@ public class KillAura extends Module {
     @Override public void onDisable() { target = null; }
 
     @Override
-    public void onTick() {
+    public void onTickStart() {
         var mc = Trestage.mc;
         if (mc.currentScreen != null) return;
         if (ticksSinceAttack < 40) ticksSinceAttack++;
@@ -73,7 +74,16 @@ public class KillAura extends Module {
         }
         if (target == null) return;
 
-        if (!Trestage.rotations.step(target, (float) speed.num)) return;
+        boolean ready = !cooldown.bool || ticksSinceAttack >= 12;
+        if (!aimOnly.bool || ready) Trestage.rotations.step(target, (float) speed.num);
+    }
+
+    @Override
+    public void onTick() {
+        var mc = Trestage.mc;
+        if (mc.currentScreen != null || target == null) return;
+        if (!MathUtil.valid(target, range.num)) { target = null; return; }
+
         if (MathUtil.angleTo(target) > aimAngle.num) return;
         if (cooldown.bool && ticksSinceAttack < 12) return;
         if (!attackTimer.passed(nextDelay)) return;
